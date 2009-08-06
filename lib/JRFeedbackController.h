@@ -56,4 +56,6 @@ typedef enum {
 			  andAlertStyle:(NSAlertStyle)alertStyle;
 
 
+- (void)showWindow:(id)sender;
+
 @end
