@@ -25,6 +25,7 @@ NSString *JRFeedbackType[JRFeedbackController_SectionCount] = {
 
 @interface JRFeedbackController ()
 + (NSURL*)postURL;
+- (void)system_profilerThread:(id)ignored;
 @end
 
 @implementation JRFeedbackController
