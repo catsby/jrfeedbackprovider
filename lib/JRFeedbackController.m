@@ -311,7 +311,7 @@ NSString *JRFeedbackType[JRFeedbackController_SectionCount] = {
 	//	something is still going on
 	[progress stopAnimation:self];
 	
-	//	disply thank you
+	//	disply error message
     [errorAlert beginSheetModalForWindow:[gFeedbackController window]
                            modalDelegate:self 
                           didEndSelector:@selector(alertDidEndWithError:returnCode:contextInfo:)
