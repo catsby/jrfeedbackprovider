@@ -26,6 +26,9 @@ NSString *JRFeedbackType[JRFeedbackController_SectionCount] = {
 @interface JRFeedbackController ()
 + (NSURL*)postURL;
 - (void)system_profilerThread:(id)ignored;
+- (void)displayErrorMessage:(NSString *)message 
+		withInformativeText:(NSString *)text 
+			  andAlertStyle:(NSAlertStyle)alertStyle;
 @end
 
 @implementation JRFeedbackController
@@ -254,9 +257,65 @@ NSString *JRFeedbackType[JRFeedbackController_SectionCount] = {
 #endif
 }
 
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response 
+{
+    if ([response respondsToSelector:@selector(statusCode)]) {
+        NSArray *errorCodes = [NSArray arrayWithObjects:
+                               [NSNumber numberWithInt:404],
+                               [NSNumber numberWithInt:500],
+                               [NSNumber numberWithInt:503],
+                               [NSNumber numberWithInt:504],
+                               nil];
+
+        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+        NSLog(@"status code %d", [httpResponse statusCode]);
+        NSNumber *statusCode = [NSNumber numberWithInt:[httpResponse statusCode]];
+        if ([errorCodes containsObject:statusCode]) {
+            NSString *errorMessage = [NSString stringWithFormat:@"The server returned an error:\n%d:\t%@\n%@\n",
+                                      [httpResponse statusCode],
+                                      [NSHTTPURLResponse localizedStringForStatusCode:[httpResponse statusCode]],
+                                      @"Please send feedback via email or try again at another time"];
+            [connection cancel];  // stop connecting; no more delegate messages
+            NSLog(@"Error with %d", [statusCode intValue]);
+            
+            [self displayErrorMessage:@"Something is technically wrong"
+                  withInformativeText:errorMessage
+                        andAlertStyle:NSWarningAlertStyle];
+        }
+    }
+}
+
 - (void)alertDidEnd:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo
 {
 	[self closeFeedback];//moved from connectionDidFinishLoading:
+}
+
+
+- (void)alertDidEndWithError:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo
+{
+    [sendButton setEnabled:YES];
+    [cancelButton setEnabled:YES];
+}
+
+- (void)displayErrorMessage:(NSString *)message 
+		withInformativeText:(NSString *)text 
+			  andAlertStyle:(NSAlertStyle)alertStyle
+{
+	NSAlert *errorAlert = [[[NSAlert alloc] init] autorelease];
+	[errorAlert addButtonWithTitle:@"OK"];
+	[errorAlert setMessageText:message];
+	[errorAlert setInformativeText:text];
+	[errorAlert setAlertStyle:alertStyle];
+	
+	//	stop the animation of the progress indicator, so user doesn't think 
+	//	something is still going on
+	[progress stopAnimation:self];
+	
+	//	disply thank you
+    [errorAlert beginSheetModalForWindow:[gFeedbackController window]
+                           modalDelegate:self 
+                          didEndSelector:@selector(alertDidEndWithError:returnCode:contextInfo:)
+								contextInfo:nil];
 }
 
 - (void)displayAlertMessage:(NSString *)message 
